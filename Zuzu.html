@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US.exe — A Museum of Us</title>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;1,400&display=swap');
+
+:root{
+    --black:#080808;
+    --charcoal:#111111;
+    --cream:#eee9df;
+    --muted:#99948c;
+    --pink:#d9a6b5;
+    --pink2:#f0c7d2;
+    --line:rgba(238,233,223,.14);
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:var(--black);
+    color:var(--cream);
+    font-family:Manrope,sans-serif;
+}
+
+button{
+    font:inherit;
+    color:inherit;
+}
+
+#canvas{
+    position:fixed;
+    inset:0;
+    z-index:1;
+}
+
+/* ---------- GRAIN ---------- */
+
+.grain{
+    position:fixed;
+    inset:-50%;
+    width:200%;
+    height:200%;
+    pointer-events:none;
+    z-index:50;
+    opacity:.055;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    animation:grain .2s steps(2) infinite;
+}
+
+@keyframes grain{
+    0%{transform:translate(0,0)}
+    25%{transform:translate(-2%,1%)}
+    50%{transform:translate(1%,-2%)}
+    75%{transform:translate(2%,2%)}
+    100%{transform:translate(-1%,-1%)}
+}
+
+/* ---------- BOOT ---------- */
+
+#boot{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#050505;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:opacity 1s ease,visibility 1s;
+}
+
+#boot.hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+
+.boot-inner{
+    width:min(600px,85vw);
+}
+
+.boot-top{
+    display:flex;
+    justify-content:space-between;
+    font-family:"DM Mono",monospace;
+    font-size:10px;
+    color:#777;
+    letter-spacing:.18em;
+    margin-bottom:50px;
+}
+
+.boot-title{
+    font-size:clamp(60px,12vw,130px);
+    font-weight:300;
+    letter-spacing:-.08em;
+    line-height:.8;
+}
+
+.boot-title span{
+    color:var(--pink);
+}
+
+.boot-sub{
+    margin-top:35px;
+    color:#777;
+    font-family:"DM Mono",monospace;
+    font-size:11px;
+    letter-spacing:.15em;
+}
+
+.boot-line{
+    height:1px;
+    background:#222;
+    margin-top:30px;
+    position:relative;
+    overflow:hidden;
+}
+
+.boot-progress{
+    position:absolute;
+    height:100%;
+    width:0;
+    background:var(--pink);
+    transition:width .1s linear;
+}
+
+.boot-status{
+    display:flex;
+    justify-content:space-between;
+    margin-top:10px;
+    color:#555;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+}
+
+/* ---------- UI ---------- */
+
+#ui{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+}
+
+.topbar{
+    position:absolute;
+    top:28px;
+    left:35px;
+    right:35px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+}
+
+.logo{
+    font-family:"DM Mono",monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+}
+
+.logo span{
+    color:var(--pink);
+}
+
+.coordinates{
+    font-family:"DM Mono",monospace;
+    color:#777;
+    font-size:9px;
+    margin-top:6px;
+}
+
+.status{
+    text-align:right;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    color:#777;
+}
+
+.status b{
+    color:var(--pink);
+    font-weight:400;
+}
+
+.bottom{
+    position:absolute;
+    left:35px;
+    right:35px;
+    bottom:25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+}
+
+.instruction{
+    color:#777;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    letter-spacing:.08em;
+    line-height:1.8;
+}
+
+.controls{
+    display:flex;
+    gap:8px;
+    pointer-events:auto;
+}
+
+.ui-btn{
+    border:1px solid var(--line);
+    background:rgba(8,8,8,.65);
+    backdrop-filter:blur(12px);
+    padding:10px 14px;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.ui-btn:hover{
+    border-color:var(--pink);
+    color:var(--pink);
+}
+
+/* ---------- HOTSPOTS ---------- */
+
+.hotspot{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    pointer-events:auto;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity .4s;
+}
+
+.hotspot.visible{
+    opacity:1;
+}
+
+.hotspot-dot{
+    width:12px;
+    height:12px;
+    border:1px solid var(--pink);
+    border-radius:50%;
+    position:relative;
+    animation:pulse 2s infinite;
+}
+
+.hotspot-dot:after{
+    content:"";
+    position:absolute;
+    inset:-7px;
+    border:1px solid rgba(217,166,181,.25);
+    border-radius:50%;
+}
+
+.hotspot-label{
+    position:absolute;
+    left:22px;
+    top:-4px;
+    white-space:nowrap;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    letter-spacing:.12em;
+    color:#aaa;
+}
+
+@keyframes pulse{
+    50%{box-shadow:0 0 0 7px rgba(217,166,181,.03)}
+}
+
+/* ---------- PANELS ---------- */
+
+.panel{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(15px);
+}
+
+.panel.active{
+    display:flex;
+}
+
+.panel-card{
+    width:min(900px,90vw);
+    max-height:85vh;
+    overflow:auto;
+    border:1px solid var(--line);
+    background:rgba(12,12,12,.94);
+    padding:45px;
+    position:relative;
+    animation:panelIn .5s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes panelIn{
+    from{
+        opacity:0;
+        transform:translateY(30px) scale(.98);
+    }
+    to{
+        opacity:1;
+        transform:none;
+    }
+}
+
+.close{
+    position:absolute;
+    top:18px;
+    right:20px;
+    background:none;
+    border:0;
+    color:#777;
+    cursor:pointer;
+    font-family:"DM Mono",monospace;
+    font-size:11px;
+}
+
+.close:hover{
+    color:var(--pink);
+}
+
+.panel-kicker{
+    color:var(--pink);
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    letter-spacing:.2em;
+    margin-bottom:15px;
+}
+
+.panel-title{
+    font-family:"Playfair Display",serif;
+    font-weight:400;
+    font-size:clamp(42px,7vw,75px);
+    line-height:.95;
+    margin-bottom:30px;
+}
+
+.panel-text{
+    max-width:650px;
+    color:#aaa;
+    font-size:14px;
+    line-height:1.9;
+}
+
+.divider{
+    height:1px;
+    background:var(--line);
+    margin:30px 0;
+}
+
+/* ---------- MEMORY GALLERY ---------- */
+
+.memory-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.memory{
+    aspect-ratio:1;
+    background:#171717;
+    border:1px solid var(--line);
+    overflow:hidden;
+    position:relative;
+}
+
+.memory img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    opacity:.8;
+    transition:.5s;
+}
+
+.memory:hover img{
+    transform:scale(1.05);
+    opacity:1;
+}
+
+.memory-placeholder{
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:flex-end;
+    padding:15px;
+    background:
+        linear-gradient(135deg,#181818,#0e0e0e);
+}
+
+.memory-placeholder span{
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    color:#777;
+}
+
+/* ---------- AUDIO ---------- */
+
+.audio-list{
+    display:flex;
+    flex-direction:column;
+}
+
+.audio{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    padding:18px 0;
+    border-bottom:1px solid var(--line);
+}
+
+.audio-number{
+    font-family:"DM Mono",monospace;
+    color:#555;
+    font-size:10px;
+}
+
+.audio-info{
+    flex:1;
+}
+
+.audio-name{
+    font-size:14px;
+}
+
+.audio-meta{
+    color:#666;
+    font-family:"DM Mono",monospace;
+    font-size:8px;
+    margin-top:5px;
+}
+
+.play{
+    border:1px solid var(--line);
+    background:none;
+    width:35px;
+    height:35px;
+    border-radius:50%;
+    cursor:pointer;
+}
+
+.play:hover{
+    border-color:var(--pink);
+    color:var(--pink);
+}
+
+/* ---------- ARCADE ---------- */
+
+.game{
+    max-width:500px;
+    margin:auto;
+    text-align:center;
+}
+
+.game-score{
+    font-family:"DM Mono",monospace;
+    color:var(--pink);
+    font-size:11px;
+    margin-bottom:25px;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+}
+
+.card{
+    aspect-ratio:1;
+    border:1px solid var(--line);
+    background:#151515;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:25px;
+    transition:.3s;
+}
+
+.card:hover{
+    border-color:#555;
+}
+
+.card.flipped{
+    border-color:var(--pink);
+    background:#21191c;
+}
+
+.card.matched{
+    opacity:.35;
+}
+
+/* ---------- ARCHIVE ---------- */
+
+.archive-row{
+    padding:20px 0;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+}
+
+.archive-date{
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    color:var(--pink);
+}
+
+.archive-name{
+    flex:1;
+    font-size:14px;
+}
+
+.archive-status{
+    font-family:"DM Mono",monospace;
+    font-size:8px;
+    color:#666;
+}
+
+/* ---------- LOCKED ---------- */
+
+.locked{
+    text-align:center;
+    padding:70px 20px;
+}
+
+.lock{
+    font-size:40px;
+    margin-bottom:20px;
+    opacity:.7;
+}
+
+.locked h2{
+    font-family:"Playfair Display",serif;
+    font-size:42px;
+    font-weight:400;
+}
+
+.locked p{
+    color:#777;
+    margin-top:15px;
+    font-size:12px;
+}
+
+/* ---------- NOTIFICATION ---------- */
+
+#toast{
+    position:fixed;
+    left:50%;
+    bottom:75px;
+    transform:translateX(-50%) translateY(20px);
+    background:#111;
+    border:1px solid var(--line);
+    padding:12px 18px;
+    font-family:"DM Mono",monospace;
+    font-size:9px;
+    opacity:0;
+    pointer-events:none;
+    transition:.4s;
+    z-index:150;
+}
+
+#toast.show{
+    opacity:1;
+    transform:translateX(-50%);
+}
+
+/* ---------- MOBILE ---------- */
+
+@media(max-width:700px){
+
+    .topbar{
+        left:18px;
+        right:18px;
+        top:18px;
+    }
+
+    .bottom{
+        left:18px;
+        right:18px;
+        bottom:15px;
+    }
+
+    .instruction{
+        max-width:180px;
+    }
+
+    .controls{
+        display:none;
+    }
+
+    .panel-card{
+        padding:30px 22px;
+    }
+
+    .memory-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .cards{
+        grid-template-columns:repeat(4,1fr);
+    }
+
+    .hotspot-label{
+        font-size:8px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="grain"></div>
+
+<!-- ================= BOOT SCREEN ================= -->
+
+<section id="boot">
+    <div class="boot-inner">
+
+        <div class="boot-top">
+            <span>PERSONAL ARCHIVE</span>
+            <span>BUILD 01.01</span>
+        </div>
+
+        <div class="boot-title">
+            US<span>.</span>exe
+        </div>
+
+        <div class="boot-sub">
+            INITIALIZING MEMORY SYSTEM...
+        </div>
+
+        <div class="boot-line">
+            <div class="boot-progress" id="progress"></div>
+        </div>
+
+        <div class="boot-status">
+            <span id="bootStatus">LOADING</span>
+            <span id="bootPercent">0%</span>
+        </div>
+
+    </div>
+</section>
+
+<!-- ================= MAIN UI ================= -->
+
+<div id="ui">
+
+    <div class="topbar">
+
+        <div>
+            <div class="logo">
+                US<span>/</span>ARCHIVE
+            </div>
+
+            <div class="coordinates">
+                MEMORY SPACE — 01
+            </div>
+        </div>
+
+        <div class="status">
+            SYSTEM <b>ONLINE</b><br>
+            MEMORIES <b id="memoryCount">00</b>/07
+        </div>
+
+    </div>
+
+    <div class="bottom">
+
+        <div class="instruction">
+            MOVE YOUR MOUSE TO EXPLORE<br>
+            CLICK THE OBJECTS TO INTERACT
+        </div>
+
+        <div class="controls">
+            <button class="ui-btn" onclick="openPanel('archive')">
+                ARCHIVE
+            </button>
+
+            <button class="ui-btn" onclick="openPanel('music')">
+                SOUND
+            </button>
+
+            <button class="ui-btn" onclick="openPanel('about')">
+                ABOUT
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= PANELS ================= -->
+
+<div class="panel" id="about">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">WELCOME</div>
+
+        <h1 class="panel-title">
+            A place<br>
+            for us.
+        </h1>
+
+        <p class="panel-text">
+            This isn't a normal website.
+            It's a little digital world built around two people,
+            the things they've done, the things they've saved,
+            and the things that haven't happened yet.
+            <br><br>
+            Everything you find here is intentional.
+        </p>
+
+    </div>
+
+</div>
+
+
+<!-- MEMORY PANEL -->
+
+<div class="panel" id="memories">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">EXHIBITION 01</div>
+
+        <h1 class="panel-title">Memories.</h1>
+
+        <p class="panel-text">
+            Replace these placeholders with your actual photos.
+            Put your images inside an <b>assets</b> folder and change
+            the image paths below.
+        </p>
+
+        <div class="divider"></div>
+
+        <div class="memory-grid">
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_001</span>
+                </div>
+            </div>
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_002</span>
+                </div>
+            </div>
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_003</span>
+                </div>
+            </div>
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_004</span>
+                </div>
+            </div>
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_005</span>
+                </div>
+            </div>
+
+            <div class="memory">
+                <div class="memory-placeholder">
+                    <span>PHOTO_006</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- MUSIC PANEL -->
+
+<div class="panel" id="music">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">EXHIBITION 02</div>
+
+        <h1 class="panel-title">Soundtrack.</h1>
+
+        <p class="panel-text">
+            Songs that belong somewhere in our timeline.
+        </p>
+
+        <div class="divider"></div>
+
+        <div class="audio-list">
+
+            <div class="audio">
+
+                <div class="audio-number">01</div>
+
+                <div class="audio-info">
+                    <div class="audio-name">Your Song Here</div>
+                    <div class="audio-meta">
+                        / SONG — MEMORY 001
+                    </div>
+                </div>
+
+                <button class="play"
+                    onclick="playAudio('assets/song1.mp3',this)">
+                    ▶
+                </button>
+
+            </div>
+
+            <div class="audio">
+
+                <div class="audio-number">02</div>
+
+                <div class="audio-info">
+                    <div class="audio-name">Another One</div>
+                    <div class="audio-meta">
+                        / SONG — MEMORY 002
+                    </div>
+                </div>
+
+                <button class="play"
+                    onclick="playAudio('assets/song2.mp3',this)">
+                    ▶
+                </button>
+
+            </div>
+
+            <div class="audio">
+
+                <div class="audio-number">03</div>
+
+                <div class="audio-info">
+                    <div class="audio-name">The One That Stays</div>
+                    <div class="audio-meta">
+                        / SONG — MEMORY 003
+                    </div>
+                </div>
+
+                <button class="play"
+                    onclick="playAudio('assets/song3.mp3',this)">
+                    ▶
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- VOICE PANEL -->
+
+<div class="panel" id="voice">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">EXHIBITION 03</div>
+
+        <h1 class="panel-title">A message.</h1>
+
+        <p class="panel-text">
+            Some things sound better when they're actually said.
+        </p>
+
+        <div class="divider"></div>
+
+        <div class="audio-list">
+
+            <div class="audio">
+
+                <div class="audio-number">01</div>
+
+                <div class="audio-info">
+                    <div class="audio-name">
+                        Open when you miss me.
+                    </div>
+
+                    <div class="audio-meta">
+                        / VOICE MESSAGE
+                    </div>
+                </div>
+
+                <button class="play"
+                    onclick="playAudio('assets/voice1.mp3',this)">
+                    ▶
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ARCHIVE -->
+
+<div class="panel" id="archive">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">SYSTEM ARCHIVE</div>
+
+        <h1 class="panel-title">Timeline.</h1>
+
+        <div class="archive-row">
+            <div class="archive-date">00.00.00</div>
+            <div class="archive-name">The beginning</div>
+            <div class="archive-status">LOCKED</div>
+        </div>
+
+        <div class="archive-row">
+            <div class="archive-date">00.00.00</div>
+            <div class="archive-name">First conversation</div>
+            <div class="archive-status">FOUND</div>
+        </div>
+
+        <div class="archive-row">
+            <div class="archive-date">00.00.00</div>
+            <div class="archive-name">That one day</div>
+            <div class="archive-status">FOUND</div>
+        </div>
+
+        <div class="archive-row">
+            <div class="archive-date">00.00.00</div>
+            <div class="archive-name">The moment everything changed</div>
+            <div class="archive-status">CLASSIFIED</div>
+        </div>
+
+        <div class="archive-row">
+            <div class="archive-date">20XX</div>
+            <div class="archive-name">What happens next?</div>
+            <div class="archive-status">UNKNOWN</div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ARCADE -->
+
+<div class="panel" id="arcade">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="panel-kicker">EXHIBITION 04</div>
+
+        <h1 class="panel-title">Remember.</h1>
+
+        <div class="game">
+
+            <div class="game-score">
+                MATCH THE MEMORIES — <span id="gameScore">0</span>/4
+            </div>
+
+            <div class="cards" id="cards"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- LOCKED FUTURE -->
+
+<div class="panel" id="future">
+
+    <div class="panel-card">
+
+        <button class="close" onclick="closePanels()">ESC / CLOSE</button>
+
+        <div class="locked">
+
+            <div class="lock">⌁</div>
+
+            <h2>Not yet.</h2>
+
+            <p>
+                There are still things you haven't discovered.
+                <br>
+                Come back when you've seen everything.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div id="toast"></div>
+
+
+<script>
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+
+const CONFIG = {
+
+    girlfriendName: "HER NAME",
+
+    /*
+       Change this later if you want.
+    */
+
+    requiredSecrets: 3
+
+};
+
+
+/* ============================================================
+   THREE.JS WORLD
+   ============================================================ */
+
+const scene = new THREE.Scene();
+
+scene.background = new THREE.Color(0x080808);
+
+const camera = new THREE.PerspectiveCamera(
+    55,
+    window.innerWidth / window.innerHeight,
+    .1,
+    100
+);
+
+camera.position.set(0,4.5,13);
+
+const renderer = new THREE.WebGLRenderer({
+    canvas:document.getElementById("canvas"),
+    antialias:true,
+    alpha:false
+});
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+
+/* ---------- LIGHT ---------- */
+
+const ambient = new THREE.AmbientLight(
+    0xffffff,
+    .8
+);
+
+scene.add(ambient);
+
+const pinkLight = new THREE.PointLight(
+    0xd9a6b5,
+    18,
+    25
+);
+
+pinkLight.position.set(
+    0,
+    5,
+    0
+);
+
+scene.add(pinkLight);
+
+const whiteLight = new THREE.PointLight(
+    0xffffff,
+    7,
+    20
+);
+
+whiteLight.position.set(
+    -7,
+    4,
+    4
+);
+
+scene.add(whiteLight);
+
+
+/* ============================================================
+   FLOOR
+   ============================================================ */
+
+const floorMaterial =
+    new THREE.MeshStandardMaterial({
+        color:0x111111,
+        roughness:.7,
+        metalness:.2
+    });
+
+const floor =
+    new THREE.Mesh(
+        new THREE.PlaneGeometry(30,30),
+        floorMaterial
+    );
+
+floor.rotation.x = -Math.PI / 2;
+
+scene.add(floor);
+
+
+/* ============================================================
+   GRID FLOOR
+   ============================================================ */
+
+const grid =
+    new THREE.GridHelper(
+        30,
+        30,
+        0x292929,
+        0x151515
+    );
+
+grid.position.y=.01;
+
+scene.add(grid);
+
+
+/* ============================================================
+   WALLS
+   ============================================================ */
+
+function createWall(x,y,z,w,h,d){
+
+    const material =
+        new THREE.MeshStandardMaterial({
+            color:0x151515,
+            roughness:.8,
+            metalness:.05
+        });
+
+    const wall =
+        new THREE.Mesh(
+            new THREE.BoxGeometry(w,h,d),
+            material
+        );
+
+    wall.position.set(x,y,z);
+
+    scene.add(wall);
+
+    return wall;
+}
+
+createWall(0,4,-8,22,8,.3);
+createWall(-11,4,0,.3,8,16);
+createWall(11,4,0,.3,8,16);
+
+
+/* ============================================================
+   CENTRAL SCULPTURE
+   ============================================================ */
+
+const sculptureGroup =
+    new THREE.Group();
+
+scene.add(sculptureGroup);
+
+const ringMaterial =
+    new THREE.MeshStandardMaterial({
+        color:0xd9a6b5,
+        emissive:0x351820,
+        metalness:.8,
+        roughness:.2
+    });
+
+for(let i=0;i<3;i++){
+
+    const ring =
+        new THREE.Mesh(
+            new THREE.TorusGeometry(
+                2.2+i*.35,
+                .025,
+                12,
+                100
+            ),
+            ringMaterial
+        );
+
+    ring.rotation.x =
+        Math.PI/2;
+
+    ring.rotation.z =
+        i*.7;
+
+    sculptureGroup.add(ring);
+}
+
+
+/* ============================================================
+   MEMORY OBJECTS
+   ============================================================ */
+
+const objects = [];
+
+function createMemoryObject(
+    x,
+    z,
+    color,
+    label,
+    action
+){
+
+    const group =
+        new THREE.Group();
+
+    const body =
+        new THREE.Mesh(
+            new THREE.BoxGeometry(
+                1.5,
+                1.5,
+                .18
+            ),
+            new THREE.MeshStandardMaterial({
+                color:color,
+                roughness:.25,
+                metalness:.45
+            })
+        );
+
+    body.position.y=2;
+
+    group.add(body);
+
+    const glow =
+        new THREE.PointLight(
+            color,
+            1.5,
+            4
+        );
+
+    glow.position.y=2;
+
+    group.add(glow);
+
+    group.position.set(x,0,z);
+
+    group.userData = {
+        label,
+        action
+    };
+
+    scene.add(group);
+
+    objects.push(group);
+
+    return group;
+}
+
+
+/* LEFT WALL */
+
+createMemoryObject(
+    -7,
+    -4,
+    0xd9a6b5,
+    "MEMORIES",
+    ()=>openPanel("memories")
+);
+
+
+/* RIGHT */
+
+createMemoryObject(
+    7,
+    -3,
+    0xbfc1c5,
+    "SOUND",
+    ()=>openPanel("music")
+);
+
+
+/* BACK */
+
+createMemoryObject(
+    -5,
+    -6,
+    0xf0c7d2,
+    "VOICE",
+    ()=>openPanel("voice")
+);
+
+
+/* ARCADE */
+
+createMemoryObject(
+    5,
+    -6,
+    0xd9a6b5,
+    "ARCADE",
+    ()=>openPanel("arcade")
+);
+
+
+/* ARCHIVE */
+
+createMemoryObject(
+    -7,
+    3,
+    0xaaa6a0,
+    "ARCHIVE",
+    ()=>openPanel("archive")
+);
+
+
+/* FUTURE */
+
+createMemoryObject(
+    7,
+    3,
+    0xf0c7d2,
+    "FUTURE",
+    ()=>{
+        if(secrets >= CONFIG.requiredSecrets){
+            openPanel("future");
+        }else{
+            toast(
+                `LOCKED — ${CONFIG.requiredSecrets-secrets} discoveries remaining`
+            );
+        }
+    }
+);
+
+
+/* ============================================================
+   FLOATING PARTICLES
+   ============================================================ */
+
+const particleGeometry =
+    new THREE.BufferGeometry();
+
+const particleCount = 700;
+
+const particlePositions =
+    new Float32Array(
+        particleCount*3
+    );
+
+for(let i=0;i<particleCount;i++){
+
+    particlePositions[i*3] =
+        (Math.random()-.5)*30;
+
+    particlePositions[i*3+1] =
+        Math.random()*10;
+
+    particlePositions[i*3+2] =
+        (Math.random()-.5)*25;
+}
+
+particleGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(
+        particlePositions,
+        3
+    )
+);
+
+const particleMaterial =
+    new THREE.PointsMaterial({
+        color:0xd9a6b5,
+        size:.025,
+        transparent:true,
+        opacity:.65
+    });
+
+const particles =
+    new THREE.Points(
+        particleGeometry,
+        particleMaterial
+    );
+
+scene.add(particles);
+
+
+/* ============================================================
+   CAMERA MOVEMENT
+   ============================================================ */
+
+let mouseX=0;
+let mouseY=0;
+
+window.addEventListener(
+    "mousemove",
+    e=>{
+
+        mouseX =
+            (e.clientX/window.innerWidth-.5);
+
+        mouseY =
+            (e.clientY/window.innerHeight-.5);
+
+    }
+);
+
+
+/* ============================================================
+   RAYCASTING
+   ============================================================ */
+
+const raycaster =
+    new THREE.Raycaster();
+
+const pointer =
+    new THREE.Vector2();
+
+window.addEventListener(
+    "click",
+    e=>{
+
+        if(
+            e.target.closest(".panel") ||
+            e.target.closest("button")
+        ) return;
+
+        pointer.x =
+            (e.clientX/window.innerWidth)*2-1;
+
+        pointer.y =
+            -(e.clientY/window.innerHeight)*2+1;
+
+        raycaster.setFromCamera(
+            pointer,
+            camera
+        );
+
+        const hits =
+            raycaster.intersectObjects(
+                objects,
+                true
+            );
+
+        if(hits.length){
+
+            let obj =
+                hits[0].object;
+
+            while(
+                obj &&
+                !obj.userData.action
+            ){
+                obj=obj.parent;
+            }
+
+            if(obj){
+
+                obj.userData.action();
+
+                discover(
+                    obj.userData.label
+                );
+
+            }
+        }
+
+    }
+);
+
+
+/* ============================================================
+   ANIMATION
+   ============================================================ */
+
+let time=0;
+
+function animate(){
+
+    requestAnimationFrame(animate);
+
+    time+=.01;
+
+    camera.position.x +=
+        (mouseX*1.5-camera.position.x)*.025;
+
+    camera.position.y +=
+        (4.5-mouseY*1.0-camera.position.y)*.025;
+
+    camera.lookAt(
+        0,
+        2,
+        -3
+    );
+
+    sculptureGroup.rotation.y =
+        time*.25;
+
+    sculptureGroup.rotation.x =
+        Math.sin(time*.4)*.1;
+
+    particles.rotation.y =
+        time*.01;
+
+    objects.forEach((obj,i)=>{
+
+        obj.rotation.y =
+            time*.3+i*.2;
+
+        obj.position.y =
+            Math.sin(
+                time+i
+            )*.08;
+
+    });
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+animate();
+
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+
+window.addEventListener(
+    "resize",
+    ()=>{
+
+        camera.aspect =
+            window.innerWidth/
+            window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+
+    }
+);
+
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+
+function openPanel(id){
+
+    document
+        .querySelectorAll(".panel")
+        .forEach(p=>
+            p.classList.remove("active")
+        );
+
+    const panel =
+        document.getElementById(id);
+
+    if(panel){
+        panel.classList.add("active");
+    }
+
+}
+
+function closePanels(){
+
+    document
+        .querySelectorAll(".panel")
+        .forEach(p=>
+            p.classList.remove("active")
+        );
+
+}
+
+document.addEventListener(
+    "keydown",
+    e=>{
+
+        if(e.key==="Escape"){
+            closePanels();
+        }
+
+    }
+);
+
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+
+let toastTimer;
+
+function toast(message){
+
+    const el =
+        document.getElementById("toast");
+
+    el.textContent=message;
+
+    el.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer =
+        setTimeout(
+            ()=>el.classList.remove("show"),
+            2500
+        );
+
+}
+
+
+/* ============================================================
+   DISCOVERY SYSTEM
+   ============================================================ */
+
+let secrets=0;
+
+const discovered =
+    new Set();
+
+function discover(name){
+
+    if(discovered.has(name))
+        return;
+
+    discovered.add(name);
+
+    secrets++;
+
+    document.getElementById(
+        "memoryCount"
+    ).textContent =
+        String(secrets).padStart(2,"0");
+
+    toast(
+        `DISCOVERY FOUND — ${name}`
+    );
+
+}
+
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+
+let currentAudio=null;
+
+function playAudio(file,button){
+
+    if(currentAudio){
+
+        currentAudio.pause();
+
+        document
+            .querySelectorAll(".play")
+            .forEach(
+                b=>b.textContent="▶"
+            );
+
+    }
+
+    currentAudio =
+        new Audio(file);
+
+    currentAudio.play()
+        .then(()=>{
+            button.textContent="Ⅱ";
+        })
+        .catch(()=>{
+
+            toast(
+                "Add the audio file to /assets/"
+            );
+
+        });
+
+    currentAudio.onended=()=>{
+        button.textContent="▶";
+    };
+
+}
+
+
+/* ============================================================
+   MEMORY MATCH GAME
+   ============================================================ */
+
+const emojis=[
+    "♡",
+    "✦",
+    "∞",
+    "☾"
+];
+
+let gameCards=[];
+let firstCard=null;
+let secondCard=null;
+let lockGame=false;
+let score=0;
+
+function initGame(){
+
+    const container =
+        document.getElementById("cards");
+
+    container.innerHTML="";
+
+    gameCards =
+        [...emojis,...emojis]
+        .sort(
+            ()=>Math.random()-.5
+        );
+
+    gameCards.forEach(
+        (symbol,index)=>{
+
+            const card =
+                document.createElement("div");
+
+            card.className="card";
+
+            card.dataset.symbol=symbol;
+
+            card.textContent="";
+
+            card.onclick=()=>{
+                flipCard(card);
+            };
+
+            container.appendChild(card);
+
+        }
+    );
+
+}
+
+function flipCard(card){
+
+    if(
+        lockGame ||
+        card===firstCard ||
+        card.classList.contains("matched")
+    ) return;
+
+    card.classList.add("flipped");
+
+    card.textContent =
+        card.dataset.symbol;
+
+    if(!firstCard){
+
+        firstCard=card;
+
+        return;
+
+    }
+
+    secondCard=card;
+
+    lockGame=true;
+
+    if(
+        firstCard.dataset.symbol===
+        secondCard.dataset.symbol
+    ){
+
+        firstCard.classList.add("matched");
+        secondCard.classList.add("matched");
+
+        score++;
+
+        document.getElementById(
+            "gameScore"
+        ).textContent=score;
+
+        discover(
+            "ARCADE MATCH "+score
+        );
+
+        resetCards();
+
+    }else{
+
+        setTimeout(
+            ()=>{
+
+                firstCard.classList.remove(
+                    "flipped"
+                );
+
+                secondCard.classList.remove(
+                    "flipped"
+                );
+
+                firstCard.textContent="";
+                secondCard.textContent="";
+
+                resetCards();
+
+            },
+            700
+        );
+
+    }
+
+}
+
+function resetCards(){
+
+    firstCard=null;
+    secondCard=null;
+    lockGame=false;
+
+}
+
+initGame();
+
+
+/* ============================================================
+   BOOT ANIMATION
+   ============================================================ */
+
+let progress=0;
+
+const statuses=[
+    "LOADING MEMORY CORE",
+    "INDEXING PHOTOGRAPHS",
+    "RESTORING CONVERSATIONS",
+    "LOADING SOUNDTRACK",
+    "INITIALIZING WORLD",
+    "SYSTEM READY"
+];
+
+const progressBar =
+    document.getElementById(
+        "progress"
+    );
+
+const bootPercent =
+    document.getElementById(
+        "bootPercent"
+    );
+
+const bootStatus =
+    document.getElementById(
+        "bootStatus"
+    );
+
+const bootInterval =
+    setInterval(()=>{
+
+        progress +=
+            Math.random()*8+2;
+
+        if(progress>=100){
+
+            progress=100;
+
+            clearInterval(
+                bootInterval
+            );
+
+            bootStatus.textContent =
+                "SYSTEM READY";
+
+            setTimeout(
+                ()=>{
+
+                    document
+                        .getElementById("boot")
+                        .classList.add("hidden");
+
+                    toast(
+                        "WELCOME TO THE ARCHIVE"
+                    );
+
+                },
+                600
+            );
+
+        }else{
+
+            const index =
+                Math.min(
+                    statuses.length-1,
+                    Math.floor(
+                        progress/
+                        (100/statuses.length)
+                    )
+                );
+
+            bootStatus.textContent =
+                statuses[index];
+
+        }
+
+        progressBar.style.width =
+            progress+"%";
+
+        bootPercent.textContent =
+            Math.floor(progress)+"%";
+
+    },120);
+
+
+/* ============================================================
+   TOUCH SUPPORT
+   ============================================================ */
+
+let touchStartX=0;
+
+window.addEventListener(
+    "touchstart",
+    e=>{
+        touchStartX =
+            e.touches[0].clientX;
+    },
+    {passive:true}
+);
+
+window.addEventListener(
+    "touchmove",
+    e=>{
+
+        const x =
+            e.touches[0].clientX;
+
+        mouseX =
+            (x/window.innerWidth-.5);
+
+    },
+    {passive:true}
+);
+
+</script>
+
+</body>
+</html>
